@@ -1,6 +1,6 @@
 library(dplyr)
 
-train_data <- read.csv("bigquery-geotab-intersection-congestion/train.csv")
+train_data <- read.csv("bigquery-geotab-intersection-congestion/train.csv", stringsAsFactors = FALSE)
 train <- sample(train_data$RowId, 50000)
 train_data <- train_data[train_data$RowId %in% train, ]
 atlanta <- filter(train_data, City == "Atlanta")
@@ -18,3 +18,51 @@ g + geom_point(aes(size = TotalTimeStopped_p50)) + coord_cartesian(xlim = c(33.7
 # если угол уменьшается или увеличение угла более 180 градусов то єто правый поворот
 
 tmp <- which(as.character(atlanta$EntryStreetName) == as.character(atlanta$ExitStreetName) & atlanta$EntryHeading != atlanta$ExitHeading)
+
+heading <- data.frame(heading = c("E", "N", "W", "S", "NE", "NW", "SE", "SW"), degree = c(0, 90, 180, 270, 45, 135, 315, 225))
+
+#mappig data with directon in degrees
+atlanta$EntryHeading <- ifelse(atlanta$EntryHeading == "N", 90,
+                               ifelse(atlanta$EntryHeading == "W", 180,
+                                      ifelse(atlanta$EntryHeading == "E", 0,
+                                             ifelse(atlanta$EntryHeading == "S", 270,
+                                                    ifelse(atlanta$EntryHeading == "NE", 45,
+                                                           ifelse(atlanta$EntryHeading == "NW", 135,
+                                                                  ifelse(atlanta$EntryHeading == "SW", 225,
+                                                                         ifelse(atlanta$EntryHeading == "SE", 315, "something wrong"))))))))
+
+atlanta$ExitHeading <- ifelse(atlanta$ExitHeading == "N", 90,
+                               ifelse(atlanta$ExitHeading == "W", 180,
+                                      ifelse(atlanta$ExitHeading == "E", 0,
+                                             ifelse(atlanta$ExitHeading == "S", 270,
+                                                    ifelse(atlanta$ExitHeading == "NE", 45,
+                                                           ifelse(atlanta$ExitHeading == "NW", 135,
+                                                                  ifelse(atlanta$ExitHeading == "SW", 225,
+                                                                         ifelse(atlanta$ExitHeading == "SE", 315, "something wrong"))))))))
+
+atlanta$EntryHeading <- as.integer(atlanta$EntryHeading)
+atlanta$ExitHeading <- as.integer(atlanta$ExitHeading)
+
+# Determining turn type between left, right, strainght, and u-turn
+atlanta$TurnType <- ifelse(atlanta$ExitHeading - atlanta$EntryHeading > 0 & atlanta$ExitHeading - atlanta$EntryHeading < 180, "left",
+                           ifelse(atlanta$ExitHeading == atlanta$EntryHeading, "straight",
+                                  ifelse(atlanta$ExitHeading - atlanta$EntryHeading < 0 | atlanta$ExitHeading - atlanta$EntryHeading > 180, "right",
+                                         ifelse(atlanta$ExitHeading - atlanta$EntryHeading == 180, "u-turn", "something went wrong"))))
+
+
+# determining distribution type
+
+for_distr <- select(atlanta, c(1, 13:17))
+percentiles <- c(0.2, 0.4, 0.5, 0.6, 0.8)
+
+# For motion chart
+atlanta_weekday <- filter(atlanta, Weekend == 0, Month == 6)
+tmp <- atlanta_weekday %>% group_by(Path, Hour) %>% summarise(n = n()) %>% arrange(desc(n))
+# When you go strainght some pathes is the same but intersection are different. Than is why we need to
+# add intersection identifier for path 
+atlanta_weekday$Path.Int <- paste(atlanta_weekday$Path, as.character(atlanta_weekday$IntersectionId), sep = "_")
+atlanta_weekday$Hour <- paste(as.character(atlanta_weekday$Hour), "00", sep = ".")
+library(googleVis)
+m <- gvisMotionChart(atlanta_weekday, idvar = "Path.Int", timevar = "Hour", xvar = "Latitude", yvar = "Longitude", sizevar = "TotalTimeStopped_p50")
+
+# привести данные о времени и о месяце в нормальное состояние, так чтоб это была одна строка в формате времени, но остальные строки остались на всякий случай
