@@ -11,11 +11,8 @@ g + geom_point(aes(col = log(TotalTimeStopped_p50))) + scale_color_gradient(low 
 g + geom_point(aes(size = TotalTimeStopped_p50))
 g + geom_point(aes(size = TotalTimeStopped_p50)) + coord_cartesian(xlim = c(33.72, 33.8), ylim = c(-84.43, -84.33))
 
-# сделать анимацию по часам!!!!
-# внести данные о поворотах, если таковые имеются: левый, правый или прямо! Можно вычислить из направлений улиц!
-# логика такова: если угол при смене направления увеличивается и увеличение менее 180 градусов
-# то єто левій поворот
-# если угол уменьшается или увеличение угла более 180 градусов то єто правый поворот
+
+
 
 tmp <- which(as.character(atlanta$EntryStreetName) == as.character(atlanta$ExitStreetName) & atlanta$EntryHeading != atlanta$ExitHeading)
 
@@ -63,6 +60,35 @@ tmp <- atlanta_weekday %>% group_by(Path, Hour) %>% summarise(n = n()) %>% arran
 atlanta_weekday$Path.Int <- paste(atlanta_weekday$Path, as.character(atlanta_weekday$IntersectionId), sep = "_")
 atlanta_weekday$Hour <- paste(as.character(atlanta_weekday$Hour), "00", sep = ".")
 library(googleVis)
-m <- gvisMotionChart(atlanta_weekday, idvar = "Path.Int", timevar = "Hour", xvar = "Latitude", yvar = "Longitude", sizevar = "TotalTimeStopped_p50")
-
+m <- gvisMotionChart(atlanta_weekday, idvar = "Path.Int", timevar = "Hour", xvar = "Latitude", yvar = "Longitude", sizevar = "TotalTimeStopped_p50", colorvar = "TurnType", date.format = "%H", options = list(height = 1000, width = 1400))
 # привести данные о времени и о месяце в нормальное состояние, так чтоб это была одна строка в формате времени, но остальные строки остались на всякий случай
+# подумать над распределением. Сделать отдельную табличку и понять распределение. Скорее всего распределение везде будет одинаковім
+# но не обязательно!
+
+distr <- data.frame(percentiles = c(0.2, 0.4, 0.5, 0.6, 0.8))
+distr <- data.frame()
+for (i in 1:nrow(atlanta_weekday)) {
+    tmp <- data.frame(percentiles = c(0.2, 0.4, 0.5, 0.6, 0.8))
+    tmp[1:5, 2] <- unlist(atlanta_weekday[i, 13:17])
+    distr <- rbind(distr, tmp)
+}
+
+install.packages("rriskDistributions")
+library(rriskDistributions)
+get.norm.par(p = c(0.2, 0.4, 0.5, 0.6, 0.8), q = c(49, 53, 54, 55, 59))
+
+# Критерий Шапиро-Уилка для проверки нормальности. Посмотреть можно ли его посчитать и опрееделить нормально ли распределение
+
+
+for (i in 1:nrow(atlanta_weekday)){
+    par <- get.norm.par(p = c(0.2, 0.4, 0.5, 0.6, 0.8), q = unlist(atlanta_weekday[i, 13:17]), show.output = FALSE)
+    atlanta_weekday[i , "mean_TimeStopped"] <- par[1]
+    atlanta_weekday[i, "sd_TimeStopped"] <- par[2]
+    
+    
+}
+
+
+
+ 
+ 
