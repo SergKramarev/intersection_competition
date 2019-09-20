@@ -8,12 +8,14 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-```{r, echo=FALSE, results='asis'}
+```{r, echo=FALSE}
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(googleVis))
+```
+```{r, cache=TRUE, echo=FALSE}
 train_data <- read.csv("bigquery-geotab-intersection-congestion/train.csv", stringsAsFactors = FALSE)
 ```
-```{r plotg0,  results='asis', tidy=FALSE, echo=FALSE}
+```{r, cache=TRUE, echo=FALSE}
 atlanta <- filter(train_data, City == "Atlanta")
 atlanta$EntryHeading <- ifelse(atlanta$EntryHeading == "N", 90,
                                ifelse(atlanta$EntryHeading == "W", 180,
@@ -44,8 +46,18 @@ atlanta$TurnType <- ifelse(atlanta$ExitHeading == atlanta$EntryHeading | atlanta
 atlanta_weekday <- filter(atlanta, City == "Atlanta", Weekend == 0, Month == 6)
 atlanta_weekday$Path.Int <- paste(atlanta_weekday$Path, as.character(atlanta_weekday$IntersectionId), sep = "_")
 m <- gvisMotionChart(atlanta_weekday, idvar = "Path.Int", timevar = "Hour", xvar = "Latitude", yvar = "Longitude", sizevar = "TotalTimeStopped_p50", colorvar = "TurnType", date.format = "%H", options = list(height = 1000, width = 1400))
-plot(m, tag = "chart")
-```
 
+```
+```{r,  results='asis', tidy=FALSE, echo=FALSE}
+x <- table(atlanta_weekday$TurnType)
+pie <- gvisPieChart(data.frame(x))
+
+```
+```{r gv,results="asis"}
+suppressPackageStartupMessages(library(googleVis))
+M <- gvisMotionChart(Fruits, "Fruit", "Year",
+                     options=list(width=600, height=400))
+print(M,"chart")
+```
 Here is some stat about traffic data in Atlanta
 
