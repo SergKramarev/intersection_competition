@@ -41,8 +41,8 @@ atlanta$EntryHeading <- as.integer(atlanta$EntryHeading)
 atlanta$ExitHeading <- as.integer(atlanta$ExitHeading)
 
 # Determining turn type between left, right, strainght, and u-turn
-atlanta$TurnType <- ifelse(atlanta$ExitHeading - atlanta$EntryHeading > 0 & atlanta$ExitHeading - atlanta$EntryHeading < 180, "left",
-                           ifelse(atlanta$ExitHeading == atlanta$EntryHeading, "straight",
+atlanta$TurnType <- ifelse(atlanta$ExitHeading == atlanta$EntryHeading | atlanta$EntryStreetName == atlanta$ExitStreetName, "straight",
+                           ifelse(atlanta$ExitHeading - atlanta$EntryHeading > 0 & atlanta$ExitHeading - atlanta$EntryHeading < 180, "left",
                                   ifelse(atlanta$ExitHeading - atlanta$EntryHeading < 0 | atlanta$ExitHeading - atlanta$EntryHeading > 180, "right",
                                          ifelse(atlanta$ExitHeading - atlanta$EntryHeading == 180, "u-turn", "something went wrong"))))
 
@@ -53,7 +53,7 @@ for_distr <- select(atlanta, c(1, 13:17))
 percentiles <- c(0.2, 0.4, 0.5, 0.6, 0.8)
 
 # For motion chart
-atlanta_weekday <- filter(atlanta, Weekend == 0, Month == 6)
+atlanta_weekday <- filter(atlanta, City == "Atlanta", Weekend == 0, Month == 6)
 tmp <- atlanta_weekday %>% group_by(Path, Hour) %>% summarise(n = n()) %>% arrange(desc(n))
 # When you go strainght some pathes is the same but intersection are different. Than is why we need to
 # add intersection identifier for path 
@@ -89,6 +89,20 @@ for (i in 1:nrow(atlanta_weekday)){
 }
 
 
+#          FALSE TRUE
+# left      1111 1207
+# right      883 2661
+# straight  1337 5771
+# u-turn       0    3
+#
+#Получается что распределение не подходит совсем для проезда прямо и поворота направо! Налево только для 50% случаев
+# подходит нормальное распределение
 
+# Можно проанализировать соотношение поворотов правые-левые и т.д.
+# Не всегда изменение направления означает поворот. Иногда главніе дорого поворачивают и єто и считается проезд прямо!
+# 
+
+x <- table(atlanta_weekday$TurnType)
+p <- gvisPieChart(data.frame(x))
  
  
